@@ -101,7 +101,7 @@ end
 
 function emu:get_word()
   local word = self[self.pc]
-  self.pc = bit.band(self.pc + 1, 0xffff)
+  self.pc = (self.pc + 1) % 0x10000
   return word
 end
 

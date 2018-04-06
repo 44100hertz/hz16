@@ -1,3 +1,4 @@
 local emu = require "emu"
+local assem = require "assem"
 
-emu.run(io.open("test.bin", "rb"))
+assem.assemble(io.open("test.asm", "r"), io.open("compiled.bin", "w"))

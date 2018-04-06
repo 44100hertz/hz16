@@ -126,7 +126,9 @@ ops.by_code = {
 }
 
 ops.by_name = {}
-for k, v in ipairs(ops.by_code) do
+for i = 0,15 do
+  local v = ops.by_code[i]
+  v.code = i
   ops.by_name[v.name] = v
 end
 
