@@ -37,7 +37,7 @@ ops.by_code = {
     end
   },
   [0x5] = {
-    name = "fmul", -- fractional multiply, used to get lower dword
+    name = "fmul", -- fractional multiply, used to get lower word
     args = 2,
     exec = function (emu, a, b)
       emu[a] = bit.band(emu[a] * emu[b] / 0x10000, 0xffff)

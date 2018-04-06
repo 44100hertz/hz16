@@ -86,12 +86,12 @@ function emu:get_key (amode)
   elseif amode < 0xC then
     -- register pointer
     return self[regs[amode + 1 - 6]]
-  elseif amode == 0xD then
+  elseif amode == 0xC then
     -- immediate value; gives pointer to ROM
     local ret = self.pc
     self:get_word() -- skip address
     return ret
-  elseif amode == 0xE then
+  elseif amode == 0xD then
     -- immediate pointer
     return self:get_word()
   else
