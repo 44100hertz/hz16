@@ -36,8 +36,16 @@ assem.tokenize_line = function (line)
         for _, sig in ipairs(sig_def) do
             local try_pos, try_end = line:find(sig, pos+1)
             -- skip past escaped quotes
-            while try_pos and line:find("^[^\\]\\['\"]", try_end-2) do
-                try_end = line:find(line:sub(try_end, try_end), try_end+1)
+            -- and the dreaded triple backslash (best solution for now)
+            while try_pos and (line:find("^[^\\]\\['\"]", try_end-2) or
+                               line:find("^\\\\\\['\"]", try_end-3))
+            do
+                local new_end = line:find(line:sub(try_end, try_end), try_end+1)
+                if new_end then
+                    try_end = new_end
+                else
+                    error("incomplete string")
+                end
             end
             if try_pos and ((not token_pos) or
                     try_pos < token_pos or
