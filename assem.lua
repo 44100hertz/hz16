@@ -2,10 +2,12 @@ local ops = require "ops"
 
 local assem = {}
 
-assem.assemble_and_write = function (infile, outfile)
+assem.assemble_and_write = function (inpath, outpath)
+    local infile = io.input(inpath)
     local program = assem.assemble(infile)
     local bin = assem.link(program, 0)
-    assem.write_bin(bin, outfile)
+    assem.write_bin(bin, outpath)
+    infile:close()
 end
 
 assem.assemble = function (infile)
@@ -14,12 +16,14 @@ assem.assemble = function (infile)
     return program
 end
 
-assem.write_bin = function (bin, outfile)
+assem.write_bin = function (bin, outpath)
+    local outfile = io.open(outpath, "wb")
     for _,word in ipairs(bin) do
         outfile:write(string.char(
-            bit.band(0xff, bit.rshift(word, 8)),
-            bit.band(0xff, word)))
+                          bit.band(0xff, word),
+                          bit.band(0xff, bit.rshift(word, 8))))
     end
+    outfile:close()
 end
 
 assem.tokenize = function (infile)
@@ -125,13 +129,21 @@ assem.parse_line = function (line, defined)
     mode0, arg0, pos = assem.parse_arg(line, pos, defined)
     mode1, arg1, pos = assem.parse_arg(line, pos, defined)
 
-    line.words = {op.code*0x1000 + (mode0 or 0)*0x0010 + (mode1 or 0)*0x0001}
+    local op_and_args =
+        bit.lshift(op.code, 12) +
+        bit.lshift(mode0 or 0, 4) +
+        bit.lshift(mode1 or 0, 0)
+
+    line.words = {op_and_args}
     line.words[#line.words+1] = arg0
     line.words[#line.words+1] = arg1
 end
 
 assem.parse_arg = function (line, pos, defined)
     local mode_id
+    if not line[pos] then
+        return 0x0, nil, pos
+    end
     if line[pos] == "#" or line[pos] == "*" then
         mode_id = line[pos]
         pos = pos + 1
@@ -141,24 +153,22 @@ assem.parse_arg = function (line, pos, defined)
         b = 1,
         c = 2,
         d = 3,
-        sp = 4,
-        pc = 5,
+        pc = 4,
+        sp = 5,
     }
-    local mode, arg
     local reg_code = reg[line[pos]]
     if reg_code then
         -- #reg or just reg both are value
-        mode = mode_id == "*" and reg_code+6 or reg_code
-        pos = pos + 1
-    elseif mode_id == "#" or (mode_id ~= "*" and type(line[pos]) == "string") then
-        mode = 0xC
-        arg, pos = assem.parse_expr(line, pos, defined)
-    else
-        mode = 0xD
-        arg, pos = assem.parse_expr(line, pos, defined)
+        local mode = mode_id == "*" and reg_code+6 or reg_code
+        return mode, nil, pos+2
     end
---    assert((not line[pos]) or line[pos] == ",", "Unexpected data before ,")
-    return mode, arg, pos+1
+    local parsed
+    parsed, pos = assem.parse_expr(line, pos, defined)
+    if mode_id == "#" or (mode_id ~= "*" and type(parsed) == "string") then
+        return 0xC, parsed, pos+1
+    else
+        return 0xD, parsed, pos+1
+    end
 end
 
 assem.parse_expr = function (line, pos, defined)

@@ -103,7 +103,7 @@ ops.by_code = {
     name = "push",
     args = 1,
     exec = function (emu, a)
-      emu.mem[emu.sp] = emu[a]
+      emu[emu.sp] = emu[a]
       emu.sp = emu.sp + 1
       if emu.sp > 0xffff then
         print "Warn: stack pointer wrapped to 0"
@@ -114,9 +114,9 @@ ops.by_code = {
   [0xF] = {
     name = "pop",
     args = 0,
-    exec = function (t, a)
-      emu[a] = emu.mem[t.sp]
+    exec = function (emu, a)
       emu.sp = emu.sp - 1
+      emu[a] = emu[emu.sp]
       if emu.sp < 0x0 then
         print "Warn: stack pointer wrapped to 0xffff"
         emu.sp = 0xffff

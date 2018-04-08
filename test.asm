@@ -4,24 +4,26 @@ reg_putc = $ff00
 ;; uses a loop and subroutine to print null-terminated string
 ;; tests some basic features of this assembler and emulator
 main
+        mov sp, #$1000    ; sane stack pointer
         mov c, hello      ; call printing function
-        push pc
+        push exit
         mov pc, print_string
-        mov $ffff, #$0    ; exit program
+exit
+        mov $ffff, #1     ; exit program
 
 ;; print a null-terminated string pointed to by c
 ;; uses: a, c
 print_string
 loop    mov a, *c         ; *c means use c as address
-        equ a, 0          ; test if 0
+        equ a, #0         ; test if 0
         ift
         pop pc            ; return if 0
         mov reg_putc, a   ; write a char
-        add c, 1          ; inc pointer
+        add c, #1         ; inc pointer
         mov pc, loop      ; loop
 
 hello
-        .data 'hello, world', 0
+        .data 'hello, world', $0a, 0
 
 ;; scratch pad ;;
 

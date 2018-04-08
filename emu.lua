@@ -2,32 +2,11 @@ local ops = require "ops"
 
 local emu = {}
 
-emu.mt = {
-    __index = function (t, k)
-        if type(k) == "number" then
-            return rawget(t, "mem")[k] or 0
-        else
-            return rawget(t, k)
-        end
-    end,
-    __newindex = function (t, k, v)
-        if type(k) == "number" then
-            if k == 0xFF00 then
-                io.write(string.char(v), "\n")
-            end
-            rawget(t, "mem")[k] = v
-        else
-            rawset(t, k, v)
-        end
-    end,
-}
-
-setmetatable(emu, emu.mt)
-
-function emu.run (file)
+function emu.run (path)
     do
         local mem = {}
         local i = 0
+        local file = io.open(path, "rb")
         for c in file:read("*all"):gmatch(".") do
             local index = math.floor(i/2)
             local rem = i % 2
@@ -50,7 +29,7 @@ function emu.run (file)
     emu.truth = false
     emu.skip = false
 
-    while emu.mem[0xffff] ~= 0 do
+    while emu[0xffff] == 0 do
         emu:tick()
     end
 end
@@ -58,20 +37,20 @@ end
 function emu:tick ()
     local word = self:get_word()
 
-    local code   = bit.band(0xf, bit.rshift(word, 4))
-    local unused = bit.band(0xf, bit.rshift(word, 0))
-    local amode1 = bit.band(0xf, bit.rshift(word, 12))
-    local amode2 = bit.band(0xf, bit.rshift(word, 8))
-
-    print(("%x %x %x %x"):format(code, unused, amode1, amode2))
+    local code   = bit.band(0xf, bit.rshift(word, 12))
+    local unused = bit.band(0xf, bit.rshift(word, 8))
+    local amode1 = bit.band(0xf, bit.rshift(word, 4))
+    local amode2 = bit.band(0xf, bit.rshift(word, 0))
 
     local op = ops.by_code[code]
     local arg1 = self:get_key(amode1)
     local arg2 = self:get_key(amode2)
 
-    print(op.name, arg1, arg2)
-
-    if not self.skip then
+    if self.skip then
+        -- "use" a skip
+        self.skip = false
+    else
+--        print(("a:%04x b:%04x c:%04x d:%04x pc:%04x sp:%04x word:%04x"):format(emu.a, emu.b, emu.c, emu.d, emu.pc, emu.sp, word))
         op.exec(self, arg1, arg2)
     end
 end
@@ -104,5 +83,27 @@ function emu:get_word()
     self.pc = (self.pc + 1) % 0x10000
     return word
 end
+
+emu.mt = {
+    __index = function (t, k)
+        if type(k) == "number" then
+            return rawget(t, "mem")[k] or 0
+        else
+            return rawget(t, k)
+        end
+    end,
+    __newindex = function (t, k, v)
+        if type(k) == "number" then
+            if k == 0xFF00 then
+                io.write(string.char(v))
+            end
+            rawget(t, "mem")[k] = v
+        else
+            rawset(t, k, v)
+        end
+    end,
+}
+
+setmetatable(emu, emu.mt)
 
 return emu
