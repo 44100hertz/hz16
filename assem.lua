@@ -165,7 +165,7 @@ assem.parse_arg = function (line, pos, defined)
     local parsed
     parsed, pos = assem.parse_expr(line, pos, defined)
     if type(parsed) == "table" then
-        assert(parsed:len() < 2, "Extra characters in argument")
+        assert(#parsed < 2, "Extra characters in argument")
         parsed = parsed[1]
     end
     if mode_id == "#" or (mode_id ~= "*" and type(parsed) == "string") then
