@@ -164,6 +164,10 @@ assem.parse_arg = function (line, pos, defined)
     end
     local parsed
     parsed, pos = assem.parse_expr(line, pos, defined)
+    if type(parsed) == "table" then
+        assert(parsed:len() < 2, "Extra characters in argument")
+        parsed = parsed[1]
+    end
     if mode_id == "#" or (mode_id ~= "*" and type(parsed) == "string") then
         return 0xC, parsed, pos+1
     else
@@ -183,11 +187,20 @@ assem.parse_expr = function (line, pos, defined)
         assert(num, "Could not parse decimal.")
         return num, pos+1
     elseif line[pos]:find("^['\"]") then
-        local esc = line[pos]:gsub('\\(.)', '%1')
-        return {esc:sub(2, -2):byte(1, esc:len())}, pos+1
+        local esc = assem.unescape_quote(line[pos]:sub(2, -2))
+        return {esc:byte(1, esc:len())}, pos+1
     else
         return defined[line[pos]] or line[pos], pos+1
     end
+end
+
+assem.unescape_quote = function (quote)
+    return quote
+        :gsub('\\0', '\0')
+        :gsub('\\r', '\r')
+        :gsub('\\n', '\n')
+        :gsub('\\t', '\t')
+        :gsub('\\(.)', '%1')
 end
 
 assem.parse_expr_into = function (line, pos, defined, list)

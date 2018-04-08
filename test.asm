@@ -23,7 +23,7 @@ loop    mov a, *c         ; *c means use c as address
         mov pc, loop      ; loop
 
 hello
-        .data 'hello, world', $0a, 0
+        .data 'hello, world\n\0'
 
 ;; scratch pad ;;
 
