@@ -3,10 +3,10 @@ reg_putc = $ff00
 ;; simple hello, world in (still being designed) hz16
 ;; uses a loop and subroutine to print null-terminated string
 ;; tests some basic features of this assembler and emulator
-main 
+main
         mov c, hello      ; call printing function
         push pc
-        mov pc, #print_string
+        mov pc, print_string
         mov $ffff, #$0    ; exit program
 
 ;; print a null-terminated string pointed to by c
@@ -20,7 +20,7 @@ loop    mov a, *c         ; *c means use c as address
         add c, 1          ; inc pointer
         mov pc, loop      ; loop
 
-hello 
+hello
         .data 'hello, world', 0
 
 ;; scratch pad ;;

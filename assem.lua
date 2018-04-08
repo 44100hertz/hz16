@@ -2,8 +2,24 @@ local ops = require "ops"
 
 local assem = {}
 
-assem.assemble = function (infile, outfile)
-    local tok = assem.tokenize(infile)
+assem.assemble_and_write = function (infile, outfile)
+    local program = assem.assemble(infile)
+    local bin = assem.link(program, 0)
+    assem.write_bin(bin, outfile)
+end
+
+assem.assemble = function (infile)
+    local program = assem.tokenize(infile)
+    assem.parse(program)
+    return program
+end
+
+assem.write_bin = function (bin, outfile)
+    for _,word in ipairs(bin) do
+        outfile:write(string.char(
+            bit.band(0xff, bit.rshift(word, 8)),
+            bit.band(0xff, word)))
+    end
 end
 
 assem.tokenize = function (infile)
@@ -15,12 +31,12 @@ assem.tokenize = function (infile)
 end
 
 assem.tokenize_line = function (line)
-    line = line
-        :gsub(";.*", "") -- strip comments
+    line = line:gsub(";.*", "") -- strip comments
     if line:match("^%s*$") then
         return nil
     end
     local tokens = {}
+    tokens.raw_line = line
     -- possible tokens
     local sig_def = {
         "%b''",    -- quote
@@ -59,8 +75,159 @@ assem.tokenize_line = function (line)
             tokens[#tokens+1] = line:sub(token_pos, token_end)
         end
     until not token_pos
-    print(table.concat(tokens, ' | '))
+--    print(table.concat(tokens, ' | '))
     return tokens
+end
+
+assem.parse = function (lines, defined)
+    defined = defined or {}
+    for _, line in ipairs(lines) do
+        assem.parse_line(line, defined)
+--        if line.words then for _, w in ipairs(line.words) do if type(w) == "number" then io.write(("%04x "):format(w)) else io.write(w, " ") end end print() end
+    end
+end
+assem.parse_line = function (line, defined)
+    local pos = 1
+    -- defining a symbol
+    if line[pos+1] == '=' then
+        defined[line[pos]] = assem.parse_expr(line, pos+2, defined)
+        return
+    end
+    -- if not directive or op, must be label
+    if line[pos] ~= '.' and not ops.by_name[line[pos]:lower()] then
+        line.label = line[pos]
+        pos = pos + 1
+        if line[pos] == ':' then pos = pos + 1 end -- skip label colon
+    end
+    -- directive
+    if line[pos] == "." then
+        if line[pos+1] == "data" then
+            pos = pos + 2
+            line.words = {}
+            local found
+            repeat
+                found, pos = assem.parse_expr_into(line, pos, defined, line.words)
+                pos = pos + 1 -- skip comma
+            until not found
+        end
+        return
+    end
+    -- operator
+    local opname = line[pos]
+    if not opname then
+        return
+    end
+    pos = pos + 1
+    local op = ops.by_name[opname]
+    assert(op, "unknown op")
+    -- parse up to two arguments
+    local mode0, arg0, mode1, arg1
+    mode0, arg0, pos = assem.parse_arg(line, pos, defined)
+    mode1, arg1, pos = assem.parse_arg(line, pos, defined)
+
+    line.words = {op.code*0x1000 + (mode0 or 0)*0x0010 + (mode1 or 0)*0x0001}
+    line.words[#line.words+1] = arg0
+    line.words[#line.words+1] = arg1
+end
+
+assem.parse_arg = function (line, pos, defined)
+    local mode_id
+    if line[pos] == "#" or line[pos] == "*" then
+        mode_id = line[pos]
+        pos = pos + 1
+    end
+    local reg = {
+        a = 0,
+        b = 1,
+        c = 2,
+        d = 3,
+        sp = 4,
+        pc = 5,
+    }
+    local mode, arg
+    local reg_code = reg[line[pos]]
+    if reg_code then
+        -- #reg or just reg both are value
+        mode = mode_id == "*" and reg_code+6 or reg_code
+        pos = pos + 1
+    elseif mode_id == "#" or (mode_id ~= "*" and type(line[pos]) == "string") then
+        mode = 0xC
+        arg, pos = assem.parse_expr(line, pos, defined)
+    else
+        mode = 0xD
+        arg, pos = assem.parse_expr(line, pos, defined)
+    end
+--    assert((not line[pos]) or line[pos] == ",", "Unexpected data before ,")
+    return mode, arg, pos+1
+end
+
+assem.parse_expr = function (line, pos, defined)
+    if not line[pos] then
+        return nil, pos
+    elseif line[pos] == "$" then
+        local num = tonumber(line[pos+1], 16)
+        assert(num, "Could not parse hex.")
+        return num, pos+2
+    elseif line[pos]:find("^%d") then
+        local num = tonumber(line[pos])
+        assert(num, "Could not parse decimal.")
+        return num, pos+1
+    elseif line[pos]:find("^['\"]") then
+        local esc = line[pos]:gsub('\\(.)', '%1')
+        return {esc:sub(2, -2):byte(1, esc:len())}, pos+1
+    else
+        return defined[line[pos]] or line[pos], pos+1
+    end
+end
+
+assem.parse_expr_into = function (line, pos, defined, list)
+    local res
+    res, pos = assem.parse_expr(line, pos, defined)
+    if type(res) == "table" then
+        for _,v in ipairs(res) do
+            list[#list+1] = v
+        end
+        return true, pos
+    elseif res then
+        list[#list+1] = res
+        return true, pos
+    else
+        return false, pos
+    end
+end
+
+assem.link = function (program, pc)
+    -- find program labels
+    local labels = {}
+    for _,line in ipairs(program) do
+        if line.label then
+            labels[line.label] = pc
+        end
+        pc = pc + (line.words and #line.words or 0)
+    end
+
+    -- apply program labels and make bin
+    pc = 1
+    local bin = {}
+    for _,line in ipairs(program) do
+        if not line.words then
+            goto continue
+        end
+        io.write(line.raw_line, (" "):rep(40 - line.raw_line:len()))
+        for _,word in ipairs(line.words) do
+            if type(word) == "string" then
+                assert(labels[word], "undefined label")
+                bin[pc] = labels[word]
+            else
+                bin[pc] = word
+            end
+            io.write(("%04x "):format(bin[pc]))
+            pc = pc + 1
+        end
+        print()
+        ::continue::
+    end
+    return bin
 end
 
 return assem
