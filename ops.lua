@@ -35,21 +35,21 @@ ops.by_code = {
         name = "mul",
         args = rmw,
         exec = function (emu, a, b)
-            emu[a] = bit.band(emu[a] * emu[b], 0xffff)
+            emu[a] = (emu[a] * emu[b]) % 0x10000
         end
     },
     [0x5] = {
         name = "fmul", -- fractional multiply, used to get lower word
         args = rmw,
         exec = function (emu, a, b)
-            emu[a] = bit.band(emu[a] * emu[b] / 0x10000, 0xffff)
+            emu[a] = (emu[a] * emu[b] / 0x10000) % 0x10000
         end
     },
     [0x6] = {
         name = "div",
         args = rmw,
         exec = function (emu, a, b)
-            emu[a] = bit.band(emu[a] / emu[b], 0xffff)
+            emu[a] = math.floor(emu[a] / emu[b]) % 0x10000
         end
     },
     [0x7] = {
