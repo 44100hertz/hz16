@@ -46,6 +46,13 @@ function emu:tick ()
     local arg1 = self:get_key(amode1)
     local arg2 = self:get_key(amode2)
 
+    -- hack to detect assign immediate
+    if (op.args[1] == "dest" and amode1 == 0x7) or
+        (op.args[2] == "dest" and amode2 == 0x7)
+    then
+        error("attempt to assign to immediate")
+    end
+
     if self.skip then
         -- "use" a skip
         self.skip = false

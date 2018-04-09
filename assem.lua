@@ -71,7 +71,7 @@ assem.parse_line = function (line, defined)
     assert(op, ("unknown op: %s"):format(line[pos]))
 
     local args = assem.split_by_comma(line, pos+1)
-    assert(#args <= op.args, "Too many arguments.")
+    assert(#args <= #op.args, "Too many arguments.")
 
     local mode0, arg0 = assem.parse_arg(args[1], defined)
     local mode1, arg1 = assem.parse_arg(args[2], defined)
