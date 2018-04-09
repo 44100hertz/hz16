@@ -122,18 +122,19 @@ assem.parse_arg = function (arg, defined)
         sp = 5,
     }
     local reg_code = reg_def[arg[pos]]
+    -- registers default to immediate
     if reg_code then
-        local mode = ptr and reg_code+6 or reg_code
+        local mode = ptr and reg_code+8 or reg_code
         return mode, nil
     end
     assem.simplify(arg, pos, defined)
     assert(#arg - pos == 0, "failed to resolve argument")
-    -- addresses default to pointers.
-    -- registers and labels default to immediate.
+    -- numbers default to addresses (pointers).
+    -- labels default to immediate.
     if immed or (not ptr and type(arg[pos]) == "string") then
-        return 0xC, arg[pos]
+        return 0x7, arg[pos]
     else
-        return 0xD, arg[pos]
+        return 0xf, arg[pos]
     end
 end
 

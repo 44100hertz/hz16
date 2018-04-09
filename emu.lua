@@ -56,26 +56,15 @@ function emu:tick ()
 end
 
 function emu:get_key (amode)
-    -- immed       0    1    2    3    4     5
-    -- addr        6    7    8    9    A     B
-    local regs = {"a", "b", "c", "d", "pc", "sp"}
-    if amode < 0x6 then
-        -- register value
-        return regs[amode + 1]
-    elseif amode < 0xC then
-        -- register pointer
-        return self[regs[amode + 1 - 6]]
-    elseif amode == 0xC then
-        -- immediate value; gives pointer to ROM
-        local ret = self.pc
-        self:get_word() -- skip address
-        return ret
-    elseif amode == 0xD then
-        -- immediate pointer
-        return self:get_word()
-    else
-        error(("Invalid mode: %x"):format(amode))
+    local regs = {[0] = "a", "b", "c", "d", "pc", "sp"}
+    local lobits = bit.band(amode, 0x7)
+    local val = regs[lobits]
+    if not val then
+        val = self.pc
+        self:get_word()
     end
+    local is_ptr = bit.band(amode, 0x8) == 0x8
+    return is_ptr and self[val] or val
 end
 
 function emu:get_word()
