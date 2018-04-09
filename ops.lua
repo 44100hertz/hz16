@@ -113,7 +113,7 @@ ops.by_code = {
   },
   [0xF] = {
     name = "pop",
-    args = 0,
+    args = 1,
     exec = function (emu, a)
       emu.sp = emu.sp - 1
       emu[a] = emu[emu.sp]
