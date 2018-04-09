@@ -12,13 +12,12 @@ exit
         mov $ffff, #1     ; exit program
 
 ;; print a null-terminated string pointed to by c
-;; uses: a, c
+;; uses: c
 print_string
-loop    mov a, *c         ; *c means use c as address
-        equ a, #0         ; test if 0
+loop    equ *c, #0        ; test if char is 0
         ift
         pop pc            ; return if 0
-        mov reg_putc, a   ; write a char
+        mov reg_putc, *c  ; write a char
         add c, #1         ; inc pointer
         mov pc, loop      ; loop
 
