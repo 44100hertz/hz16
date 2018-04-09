@@ -219,6 +219,16 @@ assem.simplify = function (expr, pos, defined)
         end
         return i
     end
+    local len_pass = function (expr, pos)
+        if expr[pos] == "len" then
+            assert(expr[pos+1], "attempt to take length of nothing")
+            local def = defined[expr[pos+1]]
+            assert(def, "cannot take length of undefined symbol")
+            table.remove(expr, pos)
+            expr[pos] = #def
+        end
+        return pos + 1
+    end
     local defined_pass = function (expr, pos)
         if expr[pos]:find("^[%a_]") and defined[expr[pos]] then
             local def = defined[expr[pos]]
@@ -254,6 +264,7 @@ assem.simplify = function (expr, pos, defined)
         end
         return pos + 1
     end
+    pass(len_pass)
     pass(defined_pass)
     pass(value_pass)
     pass(quote_pass)
