@@ -209,8 +209,8 @@ assem.simplify = function (expr, pos, defined)
     local defined_pass = function (expr, pos)
         if expr[pos]:find("^[%a_]") and defined[expr[pos]] then
             expr[pos] = defined[expr[pos]]
-            return pos + 1
         end
+        return pos + 1
     end
     local value_pass = function (expr, pos)
         if expr[pos] == "$" then
@@ -218,13 +218,12 @@ assem.simplify = function (expr, pos, defined)
             assert(num, "Could not parse hex.")
             table.remove(expr, pos)
             expr[pos] = num
-            return pos + 1
         elseif expr[pos]:find("^%d") then
             local num = tonumber(expr[pos])
             assert(num, "Could not parse decimal.")
             expr[pos] = num
-            return pos + 1
         end
+        return pos + 1
     end
     local quote_pass = function (expr, pos)
         if expr[pos]:find("^['\"]") then
@@ -235,8 +234,8 @@ assem.simplify = function (expr, pos, defined)
                 table.insert(expr, pos, byte)
                 pos = pos + 1
             end
-            return pos + 1
         end
+        return pos + 1
     end
     local pass = function (pass)
         local i = pos
