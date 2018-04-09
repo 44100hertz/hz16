@@ -90,34 +90,12 @@ assem.parse = function (lines, defined)
     end
 end
 
--- turn a flat array of tokens into an array of token arrays split at commas
--- does not include commas
-assem.split_by_comma = function (line, pos)
-    if not line[pos] then
-        return {}
-    end
-    local args = {{}}
-    local arg = args[1]
-    repeat
-        if line[pos] == ',' then
-            args[#args+1] = {}
-            arg = args[#args]
-        else
-            arg[#arg+1] = line[pos]
-        end
-        pos = pos + 1
-    until not line[pos]
-    return args
-end
-
 assem.parse_line = function (line, defined)
     local pos = 1
     -- defining a symbol
     if line[2] == '=' then
         local lvalue = line[pos]
-        assem.simplify(line, 3, defined)
-        -- TODO: variable length defines
-        defined[lvalue] = line[3]
+        defined[lvalue] = assem.parse_data_list(line, 3, defined)
         return
     end
     -- if not directive or op, must be label
@@ -133,16 +111,7 @@ assem.parse_line = function (line, defined)
     if line[pos] == "." then
         if line[pos+1]:lower() == "data" then
             pos = pos + 2
-            local args = assem.split_by_comma(line, pos)
-            line.words = {}
-            for _,arg in ipairs(args) do
-                -- find values
-                assem.simplify(arg, 1, defined)
-                -- flatten arguments
-                for _,v in ipairs(arg) do
-                    line.words[#line.words+1] = v
-                end
-            end
+            line.words = assem.parse_data_list(line, pos, defined)
         end
         return
     end
@@ -172,6 +141,27 @@ assem.parse_line = function (line, defined)
     line.words[#line.words+1] = arg1
 end
 
+-- turn a flat array of tokens into an array of token arrays split at commas
+-- does not include commas
+assem.split_by_comma = function (line, pos)
+    if not line[pos] then
+        return {}
+    end
+    local args = {{}}
+    local arg = args[1]
+    repeat
+        if line[pos] == ',' then
+            args[#args+1] = {}
+            arg = args[#args]
+        else
+            arg[#arg+1] = line[pos]
+        end
+        pos = pos + 1
+    until not line[pos]
+    return args
+end
+
+
 assem.parse_arg = function (arg, defined)
     if not arg then
         return 0x0, nil, pos
@@ -192,9 +182,7 @@ assem.parse_arg = function (arg, defined)
         local mode = ptr and reg_code+6 or reg_code
         return mode, nil
     end
---    for i,v in ipairs(arg) do print(i, v) end
     assem.simplify(arg, pos, defined)
---    for i,v in ipairs(arg) do print(i, v) end
     assert(#arg - pos == 0, "failed to resolve argument")
     -- addresses default to pointers.
     -- registers and labels default to immediate.
@@ -205,10 +193,39 @@ assem.parse_arg = function (arg, defined)
     end
 end
 
+assem.parse_data_list = function (line, pos, defined)
+    local args = assem.split_by_comma(line, pos)
+    local words = {}
+    for _,arg in ipairs(args) do
+        -- find values
+        assem.simplify(arg, 1, defined)
+        -- flatten arguments
+        for _,v in ipairs(arg) do
+            words[#words+1] = v
+        end
+    end
+    return words
+end
+
 assem.simplify = function (expr, pos, defined)
+    local pass = function (fn)
+        local i = pos
+        while expr[i] do
+            if type(expr[i]) == "number" then
+                i = i + 1
+            else
+                i = fn(expr, i)
+            end
+        end
+        return i
+    end
     local defined_pass = function (expr, pos)
         if expr[pos]:find("^[%a_]") and defined[expr[pos]] then
-            expr[pos] = defined[expr[pos]]
+            local def = defined[expr[pos]]
+            table.remove(expr, pos)
+            for i, v in pairs(def) do
+                table.insert(expr, pos+i-1, v)
+            end
         end
         return pos + 1
     end
@@ -236,17 +253,6 @@ assem.simplify = function (expr, pos, defined)
             end
         end
         return pos + 1
-    end
-    local pass = function (pass)
-        local i = pos
-        while expr[i] do
-            if type(expr[i]) ~= "number" then
-                i = pass(expr, i)
-            else
-                i = i + 1
-            end
-        end
-        return i
     end
     pass(defined_pass)
     pass(value_pass)
