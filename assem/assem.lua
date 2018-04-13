@@ -19,7 +19,8 @@ end
 
 assem.write_bin = function (bin, outpath)
     local outfile = io.open(outpath, "wb")
-    for _,word in ipairs(bin) do
+    for i = 0,#bin do
+        local word = bin[i]
         outfile:write(string.char(
                           bit.band(0xff, word),
                           bit.band(0xff, bit.rshift(word, 8))))
@@ -236,13 +237,14 @@ assem.link = function (program, pc)
     end
 
     -- apply program labels and make bin
-    pc = 1
+    pc = 0
     local bin = {}
     for _,line in ipairs(program) do
         if not line.words then
             goto continue
         end
-        io.write(line.raw_line, (" "):rep(40 - line.raw_line:len()))
+        io.write(("%04x %s %s"):format(
+                pc, line.raw_line, (" "):rep(40 - line.raw_line:len())))
         for _,word in ipairs(line.words) do
             if type(word) == "string" then
                 assert(labels[word], ("undefined label: %s"):format(word))
