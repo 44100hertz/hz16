@@ -1,0 +1,41 @@
+-- architucture 2 --
+
+Problems fixed
+ - Dedicated 'call' instruction is easier.
+ - Conditional execution better as part of the instruction.
+ - Shifting.
+ - Signedness.
+
+Lingering issues
+ - Comparing to 0 is very common and should be easier.
+ - No rotation (but it's still possible).
+
+format: nibbles OP FLAG m1 m2 [arg1] [arg2]
+  OPS:
+    NORMAL                   VARIANT
+    0 - mov  (a = b)
+    1 - add  (a += b)        sub  (a -= b) aka (a + (~b)+1)
+    2 - mul  (a *= b)        fmul (a *= b / 0x10000)
+    3 - div  (a /= b)        fdiv (a = a * 0x10000 / b)
+    4 - rem  (a %= b)        mod  (tmp = a % b, tmp < 0 ? tmp+b : tmp)
+    5 - shr  (a >>= b)
+    6 - shl  (a <<= b)
+    7 - or   (a |= b)
+    8 - and  (a &= b)
+    9 - xor  (a ^= b)
+    A - eq   (t = a == b)    neq  (t = a != b)
+    B - gt   (t = a > b)     le   (t = a < b)
+    C - sgt  (t = a > b)     sle  (t = a > b)
+    D - pop  (a = *--sp)
+    E - push (*sp++ = a)
+    F - call (push (pc+1), pc = a)
+  FLAG: bits V C ? ?
+    V - variant flag, changes operation
+    C - conditional flag, 1 = only exec if truth
+  REGS:
+    a, b, c, d, e - general purpose
+    sp - stack pointer
+    pc - program counter
+  ADDR MODES: bits RRR P
+    R: 0-6 = register; 7 = argument value
+    P: 0 = value, 1 = mem[value]

@@ -3,135 +3,38 @@ local ops = {}
 local rmw = {"dest", "src"}
 
 ops.by_code = {
-    [0x0] = {
-        name = "mov",
-        args = rmw,
-        exec = function (emu, a, b)
-            emu[a] = emu[b]
-        end
-    },
-    [0x1] = {
-        name = "add",
-        args = rmw,
-        exec = function (emu, a, b)
-            emu[a] = bit.band(emu[a] + emu[b], 0xffff)
-        end
-    },
-    [0x2] = {
-        name = "sub",
-        args = rmw,
-        exec = function (emu, a, b)
-            emu[a] = bit.band(emu[a] - emu[b], 0xffff)
-        end
-    },
-    [0x3] = {
-        name = "lsub",
-        args = rmw,
-        exec = function (emu, a, b)
-            emu[a] = bit.band(emu[b] - emu[a], 0xffff)
-        end
-    },
-    [0x4] = {
-        name = "mul",
-        args = rmw,
-        exec = function (emu, a, b)
-            emu[a] = (emu[a] * emu[b]) % 0x10000
-        end
-    },
-    [0x5] = {
-        name = "fmul", -- fractional multiply, used to get lower word
-        args = rmw,
-        exec = function (emu, a, b)
-            emu[a] = (emu[a] * emu[b] / 0x10000) % 0x10000
-        end
-    },
-    [0x6] = {
-        name = "div",
-        args = rmw,
-        exec = function (emu, a, b)
-            emu[a] = math.floor(emu[a] / emu[b]) % 0x10000
-        end
-    },
-    [0x7] = {
-        name = "ldiv",
-        args = rmw,
-        exec = function (emu, a, b)
-            emu[a] = bit.band(emu[b] / emu[a], 0xffff)
-        end
-    },
-    [0x8] = {
-        name = "mod",
-        args = rmw,
-        exec = function (emu, a, b)
-            emu[a] = bit.band(emu[a] % emu[b], 0xffff)
-        end
-    },
-    [0x9] = {
-        name = "equ",
-        args = rmw,
-        exec = function (emu, a, b)
-            emu.truth = emu[a] == emu[b]
-        end
-    },
-    [0xA] = {
-        name = "gtt",
-        args = {"src", "src"},
-        exec = function (emu, a, b)
-            emu.truth = emu[a] > emu[b]
-        end
-    },
-    [0xB] = {
-        name = "gte",
-        args = {"src", "src"},
-        exec = function (emu, a, b)
-            emu.truth = emu[a] >= emu[b]
-        end
-    },
-    [0xC] = {
-        name = "iff",
-        args = {},
-        exec = function (emu, a, b)
-            emu.skip = emu.truth
-        end
-    },
-    [0xD] = {
-        name = "ift",
-        args = {},
-        exec = function (emu, a, b)
-            emu.skip = not emu.truth
-        end
-    },
-    [0xE] = {
-        name = "push",
-        args = {"src"},
-        exec = function (emu, a)
-            emu[emu.sp] = emu[a]
-            emu.sp = emu.sp + 1
-            if emu.sp > 0xffff then
-                print "Warn: stack pointer wrapped to 0"
-                emu.sp = 0
-            end
-        end
-    },
-    [0xF] = {
-        name = "pop",
-        args = {"dest"},
-        exec = function (emu, a)
-            emu.sp = emu.sp - 1
-            emu[a] = emu[emu.sp]
-            if emu.sp < 0x0 then
-                print "Warn: stack pointer wrapped to 0xffff"
-                emu.sp = 0xffff
-            end
-        end
-    },
+    [0x00] = {name = "mov",  args = rmw},
+    [0x02] = {name = "add",  args = rmw},
+    [0x03] = {name = "sub",  args = rmw},
+    [0x04] = {name = "mul",  args = rmw},
+    [0x05] = {name = "fmul", args = rmw},
+    [0x06] = {name = "div",  args = rmw},
+    [0x07] = {name = "fdiv", args = rmw},
+    [0x08] = {name = "rem",  args = rmw},
+    [0x09] = {name = "mod",  args = rmw},
+    [0x0A] = {name = "shr",  args = rmw},
+    [0x0B] = {name = "shl",  args = rmw},
+    [0x0E] = {name = "or",   args = rmw},
+    [0x10] = {name = "and",  args = rmw},
+    [0x12] = {name = "xor",  args = rmw},
+    [0x14] = {name = "eq",   args = {"src", "src"}},
+    [0x15] = {name = "neq",  args = {"src", "src"}},
+    [0x16] = {name = "gt",   args = {"src", "src"}},
+    [0x17] = {name = "le",   args = {"src", "src"}},
+    [0x18] = {name = "sgt",  args = {"src", "src"}},
+    [0x19] = {name = "sle",  args = {"src", "src"}},
+    [0x1A] = {name = "push", args = {"src"}},
+    [0x1C] = {name = "pop",  args = {"dest"}},
+    [0x1E] = {name = "call", args = {"src"}},
 }
 
 ops.by_name = {}
-for i = 0,15 do
+for i = 0,31 do
     local v = ops.by_code[i]
-    v.code = i
-    ops.by_name[v.name] = v
+    if v then
+        v.code = i
+        ops.by_name[v.name] = v
+    end
 end
 
 return ops

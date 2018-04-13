@@ -44,7 +44,9 @@ assem.parse_line = function (line, defined)
         return
     end
     -- if not directive or op, must be label
-    if line[pos] ~= '.' and not ops.by_name[line[pos]:lower()] then
+    if line[pos] ~= '.' and line[pos] ~= 'c' and
+        not ops.by_name[line[pos]:lower()]
+    then
         line.label = line[pos]
         pos = pos + 1
         -- skip label colon
@@ -67,6 +69,12 @@ assem.parse_line = function (line, defined)
         return
     end
 
+    local cond
+    if line[pos] == "c" then
+        cond = true
+        pos = pos + 1
+    end
+
     local op = ops.by_name[line[pos]]
     assert(op, ("unknown op: %s"):format(line[pos]))
 
@@ -77,7 +85,8 @@ assem.parse_line = function (line, defined)
     local mode1, arg1 = assem.parse_arg(args[2], defined)
 
     local op_and_args =
-        bit.lshift(op.code, 12) +
+        (cond and 0x0400 or 0x0) +
+        bit.lshift(op.code, 11) +
         bit.lshift(mode0, 4) +
         bit.lshift(mode1, 0)
 
@@ -118,8 +127,9 @@ assem.parse_arg = function (arg, defined)
         b = 1,
         c = 2,
         d = 3,
-        pc = 4,
-        sp = 5,
+        e = 4,
+        pc = 5,
+        sp = 6,
     }
     local reg_code = reg_def[arg[pos]]
     -- registers default to immediate
