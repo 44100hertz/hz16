@@ -11,9 +11,10 @@ static char truth = 0;
 
 static void tick(void);
 
-int main()
+int main(int argc, char **argv)
 {
-        fread(mem, sizeof(word), 0xffff, stdin);
+        FILE *infile = argc >= 1 ? fopen(argv[1], "r") : stdin;
+        fread(mem, sizeof(word), 0xffff, infile);
         while (mem[0xffff] == 0) {
                 tick();
         }
