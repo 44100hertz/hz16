@@ -6,7 +6,6 @@ reg_putc = $ff00
 main
         mov sp, #$1000    ; sane stack pointer
         mov c, hello      ; call printing function
-        push exit
         call print_string
         mov $ffff, #1     ; exit program
 
@@ -14,7 +13,7 @@ main
 ;; uses: c
 print_string
 loop    eq *c, #0         ; test if char is 0
-        ? pop pc          ; return if 0
+        | pop pc          ; return if 0
         mov reg_putc, *c  ; write a char
         add c, #1         ; inc pointer
         mov pc, loop      ; loop
