@@ -1,4 +1,5 @@
 reg_putc = $ff00
+reg_halt = $ffff
 
         mov pc, main
         mov sp, #$1000
@@ -9,18 +10,18 @@ buzz    .data "buzz", 0
 main
         mov d, #1             ; counter
 loop
-        mov c, #0             ; string pointer, 0 means print num
-        mov a, d              ; check fizz
+        mov c, #0             ; set string pointer to null
+        mov a, d              ; fizz
         mod a, #3
         eq a, #0
         | mov c, fizz
         | call print
-        mov a, d              ; check buzz
+        mov a, d              ; buzz
         mod a, #5
         eq a, #0
         | mov c, buzz
         | call print
-        eq c, #0              ; no fizzbuzz
+        eq c, #0              ; string pointer null; no fizz or buzz
         | mov c, d
         | call print_num
         mov reg_putc, #'\n'
@@ -28,7 +29,7 @@ loop
         add d, #1
         | mov pc, loop
 
-        mov $ffff, #1
+        mov reg_halt, #1
 
 ;; copy chars into putc until 0
 ;; uses: c
