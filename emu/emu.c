@@ -14,6 +14,10 @@ static void tick(void);
 int main(int argc, char **argv)
 {
         FILE *infile = argc >= 1 ? fopen(argv[1], "r") : stdin;
+        if (!infile) {
+                puts("Could not open file.");
+                return 1;
+        }
         fread(mem, sizeof(word), 0xffff, infile);
         while (mem[0xffff] == 0) {
                 tick();
@@ -33,6 +37,8 @@ static void write(word *dest, word value)
 {
         switch (dest - mem) {
         case 0xff00: putchar(value); break;
+        case 0xff01: printf("%04x ", value); break;
+        case 0xff02: printf("%05d ", value); break;
         default: *dest = value; break;
         }
 }
@@ -66,9 +72,9 @@ void tick()
         case 0x7: write(arg0, *arg0 | *arg1); break;
         case 0x8: write(arg0, *arg0 & *arg1); break;
         case 0x9: write(arg0, *arg0 ^ *arg1); break;
-        case 0xA: truth = alt ^ (*arg0 == *arg1); break;
-        case 0xB: truth = alt ^ ((word)*arg0 > (word)*arg1); break;
-        case 0xC: truth = alt ^ (*arg0 > *arg1); break;
+        case 0xA: truth = alt != (*arg0 == *arg1); break;
+        case 0xB: truth = alt != ((word)*arg0 > (word)*arg1); break;
+        case 0xC: truth = alt != (*arg0 > *arg1); break;
         case 0xD: write(mem + sp++, *arg0); break;
         case 0xE: write(arg0, mem[--sp]); break;
         case 0xF: {
