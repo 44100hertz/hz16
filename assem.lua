@@ -44,9 +44,7 @@ assem.parse_line = function (line, defined)
         return
     end
     -- if not directive or op, must be label
-    if line[pos] ~= '.' and line[pos] ~= 'c' and
-        not ops.by_name[line[pos]:lower()]
-    then
+    if line[pos]:find("[%a_][%w_]*") and not ops.by_name[line[pos]:lower()] then
         line.label = line[pos]
         pos = pos + 1
         -- skip label colon
@@ -70,7 +68,7 @@ assem.parse_line = function (line, defined)
     end
 
     local cond
-    if line[pos] == "c" then
+    if line[pos] == "|" then
         cond = true
         pos = pos + 1
     end

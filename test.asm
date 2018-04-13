@@ -6,7 +6,7 @@ reg_putc = $ff00
 main
         mov sp, #$1000    ; sane stack pointer
         mov c, hello      ; call printing function
-        push exi          t
+        push exit
         call print_string
         mov $ffff, #1     ; exit program
 
@@ -14,21 +14,10 @@ main
 ;; uses: c
 print_string
 loop    eq *c, #0         ; test if char is 0
-        c pop pc          ; return if 0
+        ? pop pc          ; return if 0
         mov reg_putc, *c  ; write a char
         add c, #1         ; inc pointer
         mov pc, loop      ; loop
 
 hello
         .data 'hello, world\n\0'
-
-;; scratch pad ;;
-
-;; I have two more address mode slots available.
-;; could be used for fifth general register.
-;; could be used for always-zero register for comparisons
-;; could store extra arithmetic data, like high byte of multiply, remainder of division, addition overflow
-
-;; what to do with extra nibble?
-;; could be used as a bank for addresses
-;; could be used as conditional data, and replace iff and ift with something
