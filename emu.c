@@ -13,12 +13,13 @@ static void tick(void);
 
 int main()
 {
-        fread(mem, 2, 0xffff, stdin);
+        fread(mem, sizeof(word), 0xffff, stdin);
         while (mem[0xffff] == 0) {
                 tick();
         }
 }
 
+/* Decode address mode nibble into actual value */
 static word *get_arg(byte mode)
 {
         byte reg_off = mode & 7;
@@ -26,6 +27,7 @@ static word *get_arg(byte mode)
         return mode & 8 ? mem + *ptr : ptr;
 }
 
+/* Used for memory-mapped writes */
 static void write(word *dest, word value)
 {
         switch (dest - mem) {
