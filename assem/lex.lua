@@ -17,10 +17,11 @@ lex.tokenize_line = function (line)
     tokens.raw_line = line
     -- possible tokens
     local sig_def = {
-        "%b''",    -- quote
-        '%b""',    -- quote
-        "%S",      -- single symbol
-        "[%w_]+",  -- word or number
+        "%b''",  -- quote
+        '%b""',  -- quote
+        "%S",    -- single symbol
+        "[%a_][%w_]*",     -- token
+        "-?[%dA-Fa-f_]+",  -- number
     }
     local pos = 0
     repeat

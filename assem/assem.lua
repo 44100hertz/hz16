@@ -189,14 +189,21 @@ assem.simplify = function (expr, pos, defined)
     end
     local value_pass = function (expr, pos)
         if expr[pos] == "$" then
-            local num = tonumber(expr[pos+1], 16)
+            -- workaround for https://github.com/LuaJIT/LuaJIT/issues/413
+            local sign = 1
+            local num_pos = 1
+            if expr[pos+1]:find("^-") then
+                sign = -1
+                num_pos = 2
+            end
+            local num = tonumber(expr[pos+1]:sub(num_pos), 16)
             assert(num, "Could not parse hex.")
             table.remove(expr, pos)
-            expr[pos] = num
-        elseif expr[pos]:find("^%d") then
+            expr[pos] = (num * sign) % 0x10000
+        elseif expr[pos]:find("^[-%d]") then
             local num = tonumber(expr[pos])
             assert(num, "Could not parse decimal.")
-            expr[pos] = num
+            expr[pos] = num % 0x10000
         end
         return pos + 1
     end
