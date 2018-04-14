@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <assert.h>
 
 typedef unsigned short word;
 typedef unsigned char byte;
@@ -13,11 +14,9 @@ static void tick(void);
 
 int main(int argc, char **argv)
 {
-        FILE *infile = argc >= 1 ? fopen(argv[1], "r") : stdin;
-        if (!infile) {
-                puts("Could not open file.");
-                return 1;
-        }
+        assert(argv[1]);
+        FILE *infile = fopen(argv[1], "r");
+        assert(infile);
         fread(mem, sizeof(word), 0xffff, infile);
         while (mem[0xffff] == 0) {
                 tick();
@@ -32,7 +31,14 @@ static word *get_arg(byte mode)
         return mode & 8 ? mem + *ptr : ptr;
 }
 
-/* Used for memory-mapped writes */
+static word read(word *dest)
+{
+        switch (dest - mem) {
+        case 0xff00: return getchar();
+        default: return *dest;
+        }
+}
+
 static void write(word *dest, word value)
 {
         switch (dest - mem) {
@@ -48,8 +54,11 @@ void tick()
         word code  = mem[pc++];
 //        printf("truth %04x sp %04x pc %04x code %04x\n", truth, sp, pc, code);
         byte op    = 0xf & code >> 12;
-        word *arg0 = get_arg(0xf & code >> 4);
-        word *arg1 = get_arg(0xf & code);
+        word *ptr0 = get_arg(0xf & code >> 4);
+        word *ptr1 = get_arg(0xf & code);
+#define W(e) write(ptr0, e)
+#define R0 read(ptr0)
+#define R1 read(ptr1)
 
         byte alt  = (0x0800 & code) != 0;
         byte cond = (0x0400 & code) != 0;
@@ -58,28 +67,28 @@ void tick()
                 return;
         }
         switch (op) {
-        case 0x0: write(arg0, *arg1); break;
-        case 0x1: write(arg0, *arg0 + (alt ? -*arg1 : *arg1)); break;
-        case 0x2: write(arg0, *arg0 * *arg1 / (alt ? 0x10000 : 1)); break;
-        case 0x3: write(arg0, *arg0 * (alt ? 0x10000 : 1) / *arg1); break;
+        case 0x0: W(R1); break;
+        case 0x1: W(R0 + (alt ? -R1 : R1)); break;
+        case 0x2: W(R0 * R1 / (alt ? 0x10000 : 1)); break;
+        case 0x3: W(R0 * (alt ? 0x10000 : 1) / R1); break;
         case 0x4: {
-                short tmp = (short)*arg0 % (short)*arg1;
-                write(arg0, tmp + ((alt && *arg0 < 0) ? *arg1 : 0));
+                short r1 = R1, tmp = (short)R0 % r1;
+                W(tmp + ((alt && tmp < 0) ? r1 : 0));
                 break;
         }
-        case 0x5: write(arg0, *arg0 >> (0xf & *arg1)); break;
-        case 0x6: write(arg0, *arg0 << (0xf & *arg1)); break;
-        case 0x7: write(arg0, *arg0 | *arg1); break;
-        case 0x8: write(arg0, *arg0 & *arg1); break;
-        case 0x9: write(arg0, *arg0 ^ *arg1); break;
-        case 0xA: truth = alt != (*arg0 == *arg1); break;
-        case 0xB: truth = alt != ((word)*arg0 > (word)*arg1); break;
-        case 0xC: truth = alt != (*arg0 > *arg1); break;
-        case 0xD: write(mem + sp++, *arg0); break;
-        case 0xE: write(arg0, mem[--sp]); break;
+        case 0x5: W(R0 >> (0xf & R1)); break;
+        case 0x6: W(R0 << (0xf & R1)); break;
+        case 0x7: W(R0 | R1); break;
+        case 0x8: W(R0 & R1); break;
+        case 0x9: W(R0 ^ R1); break;
+        case 0xA: truth = alt != (R0 == R1); break;
+        case 0xB: truth = alt != (R0 > R1); break;
+        case 0xC: truth = alt != ((short)R0 > (short)R1); break;
+        case 0xD: write(mem + sp++, R0); break;
+        case 0xE: W(mem[--sp]); break;
         case 0xF: {
                 write(mem + sp++, pc);
-                write(&pc, *arg0);
+                write(&pc, R0);
                 break;
         }
         }

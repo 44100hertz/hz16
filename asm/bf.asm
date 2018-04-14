@@ -1,7 +1,19 @@
 ;; brainfuck interpreter in hz16
+;; reads in program as any chars until !
+;; chars after ! are sent to program
+
 ;; uses stack to store brace stack for bf code
 ;; keeps constants in b and d to reduce program size
 main
+        mov e, program        ; init program pointer
+read_code
+        mov a, $ff00          ; read a char
+        eq a, #'!'            ; ...until $
+        | mov pc, run_code
+        mov *e, a             ; write into memory
+        add e, #1             ; next char
+        mov pc, read_code
+run_code
         mov sp, #$1000
         mov a, sp             ; stack pointer goal (for skipping)
         mov b, #1             ; everything in bf adds or subs 1 lol
@@ -19,7 +31,6 @@ push_pos
         mov pc, d
 no_push_pos
         gt sp, a              ; stack pointer goal set
-        | mov $ff00, #'\n'
         | mov pc, skip        ; skip executing meaningful stuff
 
         eq *e, #'>'           ; move tape pointer
@@ -37,8 +48,9 @@ no_push_pos
         eq *e, #'.'           ; write char
         | mov $ff00, *c
         | mov pc, d
-        eq *e, #','           ; TODO: read char
+        eq *e, #','           ; read char
         | mov pc, d
+        | mov *c, $ff00
 skip
         eq *e, #']'
         | sub sp, b           ; pseudo-pop stack pointer
@@ -49,8 +61,8 @@ next
         and *c, #$ff
 
         add e, b              ; move to next tape pos
-        eq *e, #0
-        | mov $ffff, b
+        eq *e, #'!'           ; end of program
+        | mov $ffff, b        ; exit
         mov pc, loop
 
-program .data "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.", 0
+program
